@@ -1,0 +1,6 @@
+python3 s3select.py "dm-analytical-projects-rwd-333697094175-us-east-1-non-prod" "restricted/DGOS/SAS Data Archive/"
+python3 s3select.py "dm-analytical-projects-rwd-333697094175-us-east-1-non-prod" "restricted/DGOS/SAS Data Archive/projects/"
+python3 s3select.py "dm-analytical-projects-rwd-333697094175-us-east-1-non-prod" "restricted/DGOS/SAS Data Archive/warehouse/"
+python3 s3select.py "dm-analytical-projects-rwd-333697094175-us-east-1-non-prod" "restricted/DGOS/SAS Data Archive/warehouse02/"
+
+python3 s3list.py "dm-analytical-projects-rwd-333697094175-us-east-1-non-prod" "restricted/DGOS/SAS Data Archive/"

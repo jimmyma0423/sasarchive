@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+
+import warnings
+warnings.filterwarnings("ignore")
+
+import os
+import boto3
+import subprocess
+
+def list_s3_prefixes(bucket, prefix=''):
+    s3 = boto3.client('s3')
+    paginator = s3.get_paginator('list_objects_v2')
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/'):
+        for cp in page.get('CommonPrefixes', []):
+            yield cp['Prefix']
+
+def select_prefix(bucket, parent_prefix, max_depth=3, depth=1):
+    prefixes = list(list_s3_prefixes(bucket, parent_prefix))
+    if not prefixes:
+        print("No more subdirectories.")
+        return parent_prefix
+
+    for i, p in enumerate(prefixes):
+        print(f"{i+1}) {p[len(parent_prefix):]}")
+
+    selection = input("Enter your choice (1-{}): ".format(len(prefixes)))
+    if not selection:
+        return None
+
+    if not selection.isdigit() or int(selection) < 1 or int(selection) > len(prefixes):
+        print("Invalid selection. Exiting.")
+        return None
+
+    selected_prefix = prefixes[int(selection) - 1]
+
+    if depth == max_depth:
+        confirm = input(f"Do you want to proceed with this selection? {selected_prefix} (y/n): ")
+        if confirm.lower() == 'y':
+            return selected_prefix
+        else:
+            print("Operation cancelled.")
+            return None
+
+    return select_prefix(bucket, selected_prefix, max_depth, depth + 1)
+
+def restore_data(bucket_name, selected_prefix, local_directory):
+    s3_path = f"s3://{bucket_name}/{selected_prefix}"
+
+    # relative path is selected prefix minus parent prefix
+    relative_path = selected_prefix[len(parent_prefix):]
+    local_path = f"{local_directory}/{relative_path}"  
+    
+    print(f"Restoring data from: {s3_path}\nTo: {local_path}")
+
+    # ask for confirmation
+    confirm = input("Do you want to proceed? (y/n): ")
+    if confirm.lower() != 'y':
+        print("Operation cancelled.")
+        return None
+
+    if os.path.exists(local_path):
+        print("Local directory already exists. Exiting.")
+        return None
+    else:
+        os.makedirs(local_path)
+        subprocess.run(["aws", "s3", "cp", "--recursive", s3_path, local_path])
+
+if __name__ == "__main__":
+    bucket_name = "dm-analytical-projects-rwd-333697094175-us-east-1-non-prod"
+    parent_prefix = "restricted/DGOS/SAS Data Archive/"
+    local_directory = "/byr"
+
+    selected = select_prefix(bucket_name, parent_prefix)
+    if selected:
+        print(f"Selected prefix: {selected}")
+        restore_data(bucket_name, selected, local_directory)

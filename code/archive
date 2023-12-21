@@ -1,0 +1,46 @@
+#!/bin/bash
+
+
+# Define parent path and S3 parent prefix
+parent_path="/byr"
+parent_prefix="restricted/DGOS/SAS Data Archive"
+bucket_name="dm-analytical-projects-rwd-333697094175-us-east-1-non-prod"
+region="us-east-1"
+
+# Get the current directory's full path
+current_dir=$(pwd)
+
+is_subdir() {
+    local parent_dir=$1
+    local child_dir=$2
+
+    # Add trailing slash to parent_dir to ensure proper prefix matching
+    parent_dir="${parent_dir%/}/"
+
+    if [[ $child_dir == $parent_dir* ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Check if current directory is within the parent path
+if is_subdir $parent_path $current_dir; then
+    # Calculate destination prefix
+    suffix=${current_dir#$parent_path}
+    destination_prefix="${parent_prefix}${suffix}"
+
+    # Prompt for confirmation
+    read -p "Current directory ($current_dir) will be archived on S3 (s3://$bucket_name/$destination_prefix), do you agree? (y/n) " -n 1 -r
+    echo
+
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Run the S3 upload command
+        s3upload upload -path "$current_dir" -bucket $bucket_name -prefix "$destination_prefix" -region $region
+    else
+        echo "Operation cancelled."
+    fi
+else
+    echo "The current directory is not inside of $parent_path. Exiting."
+    exit 1
+fi
